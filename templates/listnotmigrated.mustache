@@ -1,0 +1,169 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template tool_migratehvp2026/listnotmigrated
+
+    Displays a list of activities to be migrated.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * none
+
+    Context variables required for this template:
+    * hvpactivities string The HTML of the HVP activities to migrate table.
+    * filterformaction string URL where filter form is submitted.
+    * filtercourseoptions array Available course filters.
+    * filtercontenttypeoptions array Available content-type filters.
+    * filterperpageoptions array Available page size values.
+    * reseturl string URL to reset filters.
+
+    Example context (json):
+    {
+        "hvpactivities": "<table><tr><td>This is the table where the list of HVP activities will be rendered</td></tr></table>",
+        "formaction": "#",
+        "settings": [
+            {
+                "name": "examplefield",
+                "label": "What do you want to do?",
+                "options": [
+                    {
+                        "value": 0,
+                        "text": "Nothing"
+                    },
+                    {
+                        "value": 1,
+                        "text": "Something"
+                    }
+                ]
+            }
+        ]
+    }
+
+}}
+<form action="{{filterformaction}}" method="get" class="mb-3" id="migratehvp2026filterform">
+    <div class="card">
+        <div class="card-body">
+            <h3>{{#str}}filters, tool_migratehvp2026{{/str}}</h3>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-3">
+                    <label class="form-label" for="filter-courseid">{{#str}}filtercourse, tool_migratehvp2026{{/str}}</label>
+                    <select class="form-select" id="filter-courseid" name="courseid">
+                        {{#filtercourseoptions}}
+                            <option value="{{value}}" {{#selected}}selected{{/selected}}>{{text}}</option>
+                        {{/filtercourseoptions}}
+                    </select>
+                </div>
+                <div class="col-12 col-lg-3">
+                    <label class="form-label" for="filter-contenttype">{{#str}}filtercontenttype, tool_migratehvp2026{{/str}}</label>
+                    <select class="form-select" id="filter-contenttype" name="contenttype">
+                        {{#filtercontenttypeoptions}}
+                            <option value="{{value}}" {{#selected}}selected{{/selected}}>{{text}}</option>
+                        {{/filtercontenttypeoptions}}
+                    </select>
+                </div>
+                <div class="col-12 col-lg-2">
+                    <label class="form-label" for="filter-perpage">{{#str}}filterperpage, tool_migratehvp2026{{/str}}</label>
+                    <select class="form-select" id="filter-perpage" name="perpage">
+                        {{#filterperpageoptions}}
+                            <option value="{{value}}" {{#selected}}selected{{/selected}}>{{text}}</option>
+                        {{/filterperpageoptions}}
+                    </select>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <button class="btn btn-primary" type="submit">{{#str}}applyfilters, tool_migratehvp2026{{/str}}</button>
+                    <a class="btn btn-secondary" href="{{reseturl}}">{{#str}}resetfilters, tool_migratehvp2026{{/str}}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<form action="{{formaction}}" method="post" id="migratehvp2026form">
+    <div data-region="hvpactivities">
+        <div class="mt-1 mb-1" data-region="hvp-activities-table">
+            {{{hvpactivities}}}
+        </div>
+    </div>
+    <div class="mt-1">
+        <h3>{{#str}} settings, tool_migratehvp2026 {{/str}}</h3>
+        {{#settings}}
+            <div class="mb-3">
+                <label class="form-label" for="{{name}}">{{label}}</label>
+                {{#options.0}}
+                    <select class="form-select" id="{{name}}" name="{{name}}">
+                          {{#options}}<option value="{{value}}" {{#selected}}selected{{/selected}}>{{text}}</option>{{/options}}
+                    </select>
+                {{/options.0}}
+            </div>
+            {{#suffixcontrol}}
+                    <div class="mb-3" id="hidesuffix-wrapper"
+                         data-label-hidden="{{hidesuffixcontrol.labelhidden}}"
+                         data-label-kept="{{hidesuffixcontrol.labelkept}}"
+                         data-placeholder-hidden="{{hidesuffixcontrol.placeholderhidden}}"
+                         data-placeholder-kept="{{hidesuffixcontrol.placeholderkept}}"
+                         {{^hidesuffixcontrol.visible}}style="display: none;"{{/hidesuffixcontrol.visible}}>
+                        <label class="form-label" for="hidesuffix">{{hidesuffixcontrol.label}}</label>
+                        <input type="text" class="form-control" id="hidesuffix" name="hidesuffix" value="{{hidesuffix}}" placeholder="{{hidesuffixcontrol.placeholder}}">
+                    </div>
+            {{/suffixcontrol}}
+        {{/settings}}
+    </div>
+    <div class="mt-1 d-inline-block w-100">
+        <button class="btn btn-primary" id="confirm-bulk-action">{{# str}} migrate, tool_migratehvp2026 {{/ str}}</button>
+    </div>
+</form>
+
+{{#js}}
+(() => {
+    const keeporiginal = document.getElementById('keeporiginal');
+    const suffixwrapper = document.getElementById('hidesuffix-wrapper');
+    const suffixlabel = suffixwrapper ? suffixwrapper.querySelector('label[for="hidesuffix"]') : null;
+    const suffixinput = document.getElementById('hidesuffix');
+
+    if (!keeporiginal || !suffixwrapper || !suffixlabel || !suffixinput) {
+        return;
+    }
+
+    const HIDE = '2';
+    const KEEP = '1';
+    const labelhidden = suffixwrapper.dataset.labelHidden || '';
+    const labelkept = suffixwrapper.dataset.labelKept || '';
+    const placeholderhidden = suffixwrapper.dataset.placeholderHidden || '';
+    const placeholderkept = suffixwrapper.dataset.placeholderKept || '';
+
+    const updatesuffixui = () => {
+        const value = keeporiginal.value;
+
+        if (value === HIDE) {
+            suffixwrapper.style.display = '';
+            suffixlabel.textContent = labelhidden;
+            suffixinput.placeholder = placeholderhidden;
+        } else if (value === KEEP) {
+            suffixwrapper.style.display = '';
+            suffixlabel.textContent = labelkept;
+            suffixinput.placeholder = placeholderkept;
+        } else {
+            suffixwrapper.style.display = 'none';
+        }
+    };
+
+    keeporiginal.addEventListener('change', updatesuffixui);
+    updatesuffixui();
+})();
+{{/js}}
