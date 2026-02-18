@@ -1,5 +1,17 @@
 # VERSIONS HISTORY
 
+## Changes in version 0.7.0 (20260218) - Standalone 2026 fork
+
+- Standalone continuation of the original `moodlehq/moodle-tool_migratehvp2h5p` plugin.
+- Versioning diverges from upstream and now follows this repository release line.
+- Fix pagination issues in migration listings.
+- Add filters and additional columns to improve migration table usability.
+- Add selectable rows-per-page in the migration UI.
+- Add configurable suffixes for migrated source activities when they are hidden or kept.
+- Add options to preserve/migrate visibility and availability settings.
+- Improve robustness checks and per-step logging for successful and failed migrations.
+- Add an admin page to review and resolve failed or incomplete migrations.
+
 ## Changes in version 0.2.0 (20250930) - I'm a new me
 - Add Moodle 5.0 and 5.1 support
 - For Moodle 4.5 downwards, version 0.1.7 is the latest stable

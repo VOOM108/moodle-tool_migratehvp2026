@@ -18,7 +18,7 @@
  * Upgrade steps for tool_migratehvp2026.
  *
  * @package     tool_migratehvp2026
- * @copyright   2026 Andreas Giesen
+ * @copyright   2026 Andreas Giesen <andreas@108design.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

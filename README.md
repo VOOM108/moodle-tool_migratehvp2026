@@ -1,41 +1,58 @@
-# Migrate mod_hvp to mod_h5pactivity
+# Migrate mod_hvp to mod_h5pactivity (2026 standalone fork)
 
-[![Moodle Plugin CI](https://github.com/moodlehq/moodle-tool_migratehvp2h5p/actions/workflows/ci.yml/badge.svg)](https://github.com/moodlehq/moodle-tool_migratehvp2h5p/actions/workflows/ci.yml)
+This repository contains a **standalone continuation** of the original Moodle plugin:
+`moodlehq/moodle-tool_migratehvp2h5p`.
 
-Moodle plugin allowing to migrate activities created with the mod_hvp plugin created by Joubel to the new mod_h5pactivity created by Moodle HQ since Moodle 3.9.
+It migrates activities from `mod_hvp` (Joubel H5P) to Moodle core `mod_h5pactivity`, and extends the original tool with improved migration controls, observability, and recovery workflows.
 
-Some limitations to consider before using this plugin:
+## Origin and standalone status
 
-* Currently it's still not possible to save the current status with the mod_h5pactivity. The mod_hvp supports it (although it's disabled by default) so, before migrating the activities, consider students might loose these unfinished attempts.
-* The new mod_h5pactivity hasn't any global settings to define the default behaviour so general settings defined in mod_hvp, such as the default display options or whether to use or not the hub, are not migrated.
+- Original project reference: <https://github.com/moodlehq/moodle-tool_migratehvp2h5p>
+- This repository (`tool_migratehvp2026`) is maintained independently.
+- Versioning in this repository **diverges from upstream** and follows its own release line.
 
-## How to use this tool
+## What is enhanced in this fork
 
-There are two ways to execute the activity migration:
+Compared to the original base, this fork includes:
 
-* Web interface: site administration -> Migrate content from mod_hvp to mod_h5pactivity
-* CLI via terminal: php admin/tool/migratehvp2h5p/cli/migrate.php --execute
+- Pagination fixes in migration listings.
+- Filters and extra columns in the migration table.
+- Configurable rows-per-page in the admin UI.
+- Configurable suffixes when original HVP activities are hidden or kept after migration.
+- Options to preserve/migrate original visibility and availability settings.
+- More robust checks and detailed per-step logging for successful and failed migrations.
+- An admin page to review, retry, or reset failed/incomplete migration rows.
 
-Migrations tool will scan for non migrated hvp activities and will create as many H5P activities as needed.
+## Usage
 
-By default, the CLI method will only migrate up to 100 hvp activities per execution, will keep the originals hvp in the courses and will add a link to the content bank. Use the option "--help" to know the CLI params to change this behavior to increase the migration limit, delete/hide the originals hvp, decide whether to link/copy to the content bank or filter by content type.
+There are two ways to run migrations:
 
-The tool will only migrate each hvp once. In case you need to re-migrate an hvp, just remove or rename the migrated h5p activity, this way the tool won't detect the hvp as migrated.
+- **Web UI**: Site administration -> Migrate content from mod_hvp to mod_h5pactivity (2026 fork)
+- **CLI**: `php admin/tool/migratehvp2026/cli/migrate.php --execute`
 
-## Tool dependencies
+The tool scans for non-migrated HVP activities and creates corresponding H5P activities.
 
-This tools requires both core H5P and the third party plugin (mod_hvp) installed in the system. The minimum requirements are:
+By default, CLI migrates up to 100 HVP activities per run, keeps originals, and links to Content bank. Run with `--help` to inspect available parameters (limits, keep/delete/hide behavior, content bank handling, filtering, and related options).
 
-* Moodle core 3.9: otherwise the H5P activity is not present
-* HVP activity 2020020500 or more: in previous versions this migration tool won't work
-* H5P core activity enabled
+Each HVP is migrated once according to the migration map. To re-migrate an item, reset its migration status from the failed/incomplete admin page or remove the mapped target as appropriate for your workflow.
 
-Apart from that, for adding contents to the content bank too (so it's not strictly required if contents won't be migrated to the content bank):
+## Dependencies
 
-* H5P content type of the content bank enabled
-* Content bank repository enabled
+Minimum requirements:
 
-### License
+- Moodle core with `mod_h5pactivity` available and enabled
+- `mod_hvp` plugin version `2020020500` or newer
+
+For Content bank integration:
+
+- H5P content type enabled in Content bank
+- Content bank repository enabled
+
+## Author
+
+- Andreas Giesen <andreas@108design.com>
+
+## License
 
 This program is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
@@ -44,7 +61,7 @@ version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
-this program.  If not, see <http://www.gnu.org/licenses/>.
+this program. If not, see <http://www.gnu.org/licenses/>.
