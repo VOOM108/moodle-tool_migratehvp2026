@@ -3,6 +3,8 @@
 This repository contains a **standalone continuation** of the original Moodle plugin:
 `moodlehq/moodle-tool_migratehvp2h5p`.
 
+READ DISCLAIMER BEFORE USING IT: https://github.com/VOOM108/moodle-tool_migratehvp2026/issues/1
+
 It migrates activities from `mod_hvp` (Joubel H5P) to Moodle core `mod_h5pactivity`, and extends the original tool with improved migration controls, observability, and recovery workflows.
 
 ## Origin and standalone status
