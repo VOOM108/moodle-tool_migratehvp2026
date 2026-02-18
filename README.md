@@ -36,6 +36,20 @@ The tool scans for non-migrated HVP activities and creates corresponding H5P act
 
 By default, CLI migrates up to 100 HVP activities per run, keeps originals, and links to Content bank. Run with `--help` to inspect available parameters (limits, keep/delete/hide behavior, content bank handling, filtering, and related options).
 
+### CLI options (highlights)
+
+- `--limit=N` Maximum activities per run (default `100`)
+- `--keeporiginal=0|1|2` Action on original HVP (`0` delete, `1` keep, `2` hide)
+- `--suffix="TEXT"` Optional suffix added to original HVP names when originals are kept/hidden
+- `--copy2cb=0|1|2` Content bank behavior (`0` no, `1` link, `2` copy)
+- `--preserveavailability=0|1` Preserve visibility/availability from original activity (default `1`)
+- `--courseid=N` Restrict selection to one course id
+- `--contenttypes=1,2,3` Restrict selection to main library ids
+
+Example:
+
+`php admin/tool/migratehvp2026/cli/migrate.php --execute --courseid=42 --keeporiginal=2 --suffix="(old hidden copy)" --preserveavailability=1 --limit=200`
+
 Each HVP is migrated once according to the migration map. To re-migrate an item, reset its migration status from the failed/incomplete admin page or remove the mapped target as appropriate for your workflow.
 
 ## Dependencies

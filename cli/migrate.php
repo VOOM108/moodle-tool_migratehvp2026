@@ -37,6 +37,9 @@ list($options, $unrecognized) = cli_get_params(
         'keeporiginal' => 1,
         'copy2cb' => api::COPY2CBYESWITHLINK,
         'contenttypes' => [],
+        'suffix' => '',
+        'preserveavailability' => 1,
+        'courseid' => 0,
     ], [
         'e' => 'execute',
         'h' => 'help',
@@ -63,11 +66,17 @@ Options:
  -c, --copy2cb=N           Whether H5P files should be added to the content bank with a link (1), as a copy (2) or not added (0)
  -t, --contenttypes=N      The library ids, separated by commas, for the mod_hvp contents to migrate.
                            Only contents having these libraries defined as main library will be migrated.
+     --courseid=N          Restrict migration to activities in a single course id.
  -l  --limit=N             The maximmum number of activities per execution (default 100).
                            Already migrated activities will be ignored.
+     --preserveavailability=N
+                           Keep visibility and availability from mod_hvp in mod_h5pactivity (1 yes, 0 no).
+     --suffix="TEXT"       Optional suffix added to original mod_hvp names when originals are kept or hidden.
 
 Example:
 \$sudo -u www-data /usr/bin/php admin/tool/migratehvp2026/cli/migrate.php --execute
+
+\$sudo -u www-data /usr/bin/php admin/tool/migratehvp2026/cli/migrate.php --execute --courseid=42 --keeporiginal=2 --suffix="(old hidden copy)" --preserveavailability=1
 
 EOT;
 
@@ -93,6 +102,10 @@ if (!isset($options['copy2cb'])) {
     $options['copy2cb'] = api::COPY2CBYESWITHLINK;
 }
 
+if (!isset($options['preserveavailability'])) {
+    $options['preserveavailability'] = 1;
+}
+
 if (!empty($options['contenttypes'])) {
     $ctparam = explode(',', $options['contenttypes']);
 } else {
@@ -101,6 +114,9 @@ if (!empty($options['contenttypes'])) {
 
 $keeporiginal = $options['keeporiginal'];
 $copy2cb = $options['copy2cb'];
+$suffix = trim((string)($options['suffix'] ?? ''));
+$preserveavailability = $options['preserveavailability'];
+$courseid = $options['courseid'] ?? 0;
 $limit = $options['limit'] ?? 100;
 $execute = (empty($options['execute'])) ? false : true;
 
@@ -108,15 +124,50 @@ if (!is_numeric($limit)) {
     echo "Limit must be an integer.\n";
     exit(1);
 }
+$limit = intval($limit);
 
 if (!is_numeric($keeporiginal)) {
     echo "keeporiginal must be an integer.\n";
+    exit(1);
+}
+$keeporiginal = intval($keeporiginal);
+if (!in_array($keeporiginal, [api::DELETEORIGINAL, api::KEEPORIGINAL, api::HIDEORIGINAL], true)) {
+    echo "keeporiginal must be 0 (delete), 1 (keep) or 2 (hide).\n";
     exit(1);
 }
 
 if (!is_numeric($copy2cb)) {
     echo "copy2cb must be an integer.\n";
     exit(1);
+}
+$copy2cb = intval($copy2cb);
+if (!in_array($copy2cb, [api::COPY2CBNO, api::COPY2CBYESWITHLINK, api::COPY2CBYESWITHOUTLINK], true)) {
+    echo "copy2cb must be 0 (no content bank), 1 (link) or 2 (copy).\n";
+    exit(1);
+}
+
+if (!is_numeric($preserveavailability)) {
+    echo "preserveavailability must be an integer (0 or 1).\n";
+    exit(1);
+}
+$preserveavailability = intval($preserveavailability);
+if (!in_array($preserveavailability, [0, 1], true)) {
+    echo "preserveavailability must be 0 or 1.\n";
+    exit(1);
+}
+
+if (!is_numeric($courseid)) {
+    echo "courseid must be an integer.\n";
+    exit(1);
+}
+$courseid = intval($courseid);
+if ($courseid < 0) {
+    echo "courseid must be 0 or a valid course id.\n";
+    exit(1);
+}
+
+if ($keeporiginal === api::DELETEORIGINAL) {
+    $suffix = '';
 }
 
 $contenttypes = [];
@@ -143,9 +194,9 @@ $humantimenow = date('r', time());
 
 mtrace("Server Time: {$humantimenow}\n");
 
-mtrace("Search for $limit non migrated hvp activites\n");
+mtrace("Search for $limit non migrated hvp activites" . ($courseid > 0 ? " in course {$courseid}" : '') . "\n");
 
-list($sql, $params) = api::get_sql_hvp_to_migrate(false, null, $contenttypes);
+list($sql, $params) = api::get_sql_hvp_to_migrate(false, null, $contenttypes, $courseid);
 $activities = $DB->get_records_sql($sql, $params, 0, $limit);
 
 if (empty($activities)) {
@@ -160,7 +211,13 @@ foreach ($activities as $hvpid => $info) {
         continue;
     }
     try {
-        $messages = tool_migratehvp2026\api::migrate_hvp2h5p($hvpid, $keeporiginal, $copy2cb);
+        $messages = tool_migratehvp2026\api::migrate_hvp2h5p(
+            $hvpid,
+            $keeporiginal,
+            $copy2cb,
+            $suffix,
+            $preserveavailability
+        );
         if (empty($messages)) {
             mtrace("\t ...Successful\n");
         } else {
