@@ -19,7 +19,8 @@
  *
  * @package     tool_migratehvp2026
  * @category    string
- * @copyright   2026 Andreas Giesen <andreas@108design.com> (fork, based on original work by Sara Arjona <sara@moodle.com>)
+ * @copyright   2020 Sara Arjona <sara@moodle.com>
+ * @copyright   2026 Andreas Giesen <andreas@108design.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

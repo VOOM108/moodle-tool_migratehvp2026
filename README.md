@@ -50,9 +50,10 @@ For Content bank integration:
 - H5P content type enabled in Content bank
 - Content bank repository enabled
 
-## Author
+## Authors
 
-- Andreas Giesen <andreas@108design.com>
+- Original authors (upstream): Sara Arjona <sara@moodle.com>, Ferran Recio <ferran@moodle.com>, and contributors to `moodlehq/moodle-tool_migratehvp2h5p`
+- Fork maintainer: Andreas Giesen <andreas@108design.com>
 
 ## License
 
