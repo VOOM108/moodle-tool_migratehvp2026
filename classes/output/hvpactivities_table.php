@@ -102,10 +102,10 @@ class hvpactivities_table extends table_sql {
         $columnheaders = [
             'select' => $checkbox,
             'id' => get_string('id', 'tool_migratehvp2026'),
-            'course' => get_string('course'),
             'category' => get_string('category'),
-            'name' => get_string('name'),
+            'course' => get_string('course'),
             'contenttype' => get_string('contenttype', 'tool_migratehvp2026'),
+            'name' => get_string('contentname', 'tool_migratehvp2026'),
             'graded' => get_string('graded', 'tool_migratehvp2026'),
             'attempted' => get_string('attempted', 'tool_migratehvp2026'),
             'savedstate' => get_string('savedstate', 'tool_migratehvp2026'),

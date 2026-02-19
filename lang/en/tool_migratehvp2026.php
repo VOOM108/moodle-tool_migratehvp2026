@@ -29,6 +29,7 @@ defined('MOODLE_INTERNAL') || die();
 $string['attempted'] = 'Attempted users';
 $string['cannot_migrate'] = 'Cannot migrate the activity';
 $string['contenttype'] = 'Content-type';
+$string['contentname'] = 'Content name';
 $string['copy2cb'] = 'Should these contents be added to the content bank?';
 $string['copy2cb_no'] = 'No, they should be only created in the activity.';
 $string['copy2cb_yeswithlink'] = 'Yes, and a link to these files should be used in the activity';
