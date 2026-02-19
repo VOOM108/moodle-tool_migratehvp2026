@@ -45,6 +45,9 @@ require_once($CFG->dirroot.'/lib/tablelib.php');
  */
 class hvpactivities_table extends table_sql {
 
+    /** @var int Selected category id to filter by. */
+    public $filtercategoryid = 0;
+
     /** @var int Selected course id to filter by. */
     public $filtercourseid = 0;
 
@@ -222,7 +225,8 @@ class hvpactivities_table extends table_sql {
             $sort,
             null,
             $this->filtercourseid,
-            $this->filtercontenttype
+            $this->filtercontenttype,
+            $this->filtercategoryid
         );
 
         return [$sql, $params];

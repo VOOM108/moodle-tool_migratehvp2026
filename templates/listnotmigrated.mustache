@@ -62,10 +62,18 @@
             <h3>{{#str}}filters, tool_migratehvp2026{{/str}}</h3>
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-lg-3">
+                    <label class="form-label" for="filter-categoryid">{{#str}}filtercategory, tool_migratehvp2026{{/str}}</label>
+                    <select class="form-select" id="filter-categoryid" name="categoryid">
+                        {{#filtercategoryoptions}}
+                            <option value="{{value}}" {{#selected}}selected{{/selected}}>{{text}}</option>
+                        {{/filtercategoryoptions}}
+                    </select>
+                </div>
+                <div class="col-12 col-lg-3">
                     <label class="form-label" for="filter-courseid">{{#str}}filtercourse, tool_migratehvp2026{{/str}}</label>
                     <select class="form-select" id="filter-courseid" name="courseid">
                         {{#filtercourseoptions}}
-                            <option value="{{value}}" {{#selected}}selected{{/selected}}>{{text}}</option>
+                            <option value="{{value}}" data-categoryid="{{categoryid}}" {{#selected}}selected{{/selected}}>{{text}}</option>
                         {{/filtercourseoptions}}
                     </select>
                 </div>
@@ -85,7 +93,7 @@
                         {{/filterperpageoptions}}
                     </select>
                 </div>
-                <div class="col-12 col-lg-4">
+                <div class="col-12 col-lg-3">
                     <button class="btn btn-primary" type="submit">{{#str}}applyfilters, tool_migratehvp2026{{/str}}</button>
                     <a class="btn btn-secondary" href="{{reseturl}}">{{#str}}resetfilters, tool_migratehvp2026{{/str}}</a>
                 </div>
@@ -131,6 +139,36 @@
 
 {{#js}}
 (() => {
+    const categoryselect = document.getElementById('filter-categoryid');
+    const courseselect = document.getElementById('filter-courseid');
+
+    const updatecourseoptions = () => {
+        if (!categoryselect || !courseselect) {
+            return;
+        }
+
+        const selectedcategory = categoryselect.value || '0';
+        let selectedstillvisible = false;
+
+        Array.from(courseselect.options).forEach((option) => {
+            const optioncategory = option.dataset.categoryid || '0';
+            const show = selectedcategory === '0' || option.value === '0' || optioncategory === selectedcategory;
+            option.hidden = !show;
+            if (show && option.selected) {
+                selectedstillvisible = true;
+            }
+        });
+
+        if (!selectedstillvisible) {
+            courseselect.value = '0';
+        }
+    };
+
+    if (categoryselect && courseselect) {
+        categoryselect.addEventListener('change', updatecourseoptions);
+        updatecourseoptions();
+    }
+
     const keeporiginal = document.getElementById('keeporiginal');
     const suffixwrapper = document.getElementById('hidesuffix-wrapper');
     const suffixlabel = suffixwrapper ? suffixwrapper.querySelector('label[for="hidesuffix"]') : null;

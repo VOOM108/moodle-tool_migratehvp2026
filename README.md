@@ -19,6 +19,7 @@ Compared to the original base, this fork includes:
 
 - Pagination fixes in migration listings.
 - Filters and extra columns in the migration table.
+- Category filter with dynamic course dropdown narrowing (course options update immediately when category changes).
 - Configurable rows-per-page in the admin UI.
 - Configurable suffixes when original HVP activities are hidden or kept after migration.
 - Options to preserve/migrate original visibility and availability settings.

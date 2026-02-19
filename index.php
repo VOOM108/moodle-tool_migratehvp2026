@@ -46,6 +46,7 @@ $copy2cb = optional_param('copy2cb', api::COPY2CBYESWITHLINK, PARAM_INT);
 $hidesuffix = trim(optional_param('hidesuffix', '', PARAM_TEXT));
 $preserveavailability = optional_param('preserveavailability', 1, PARAM_INT);
 $preserveavailability = ($preserveavailability === 0) ? 0 : 1;
+$categoryid = optional_param('categoryid', 0, PARAM_INT);
 $courseid = optional_param('courseid', 0, PARAM_INT);
 $contenttype = trim(optional_param('contenttype', '', PARAM_TEXT));
 $perpage = optional_param('perpage', 50, PARAM_INT);
@@ -58,6 +59,7 @@ if ($keeporiginal === api::DELETEORIGINAL) {
 }
 
 $urlparams = [
+    'categoryid' => $categoryid,
     'courseid' => $courseid,
     'contenttype' => $contenttype,
     'perpage' => $perpage,
@@ -117,6 +119,7 @@ foreach ($notices as $notice) {
 
 $table = new hvpactivities_table();
 $table->baseurl = $url;
+$table->filtercategoryid = $categoryid;
 $table->filtercourseid = $courseid;
 $table->filtercontenttype = $contenttype;
 $table->filterperpage = $perpage;

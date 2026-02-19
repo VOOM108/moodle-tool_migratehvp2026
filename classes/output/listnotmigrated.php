@@ -61,26 +61,68 @@ class listnotmigrated implements renderable, templatable {
     public function export_for_template(renderer_base $output): stdClass {
         global $DB;
 
-        $courses = [];
+        $selectedcategoryid = (int)$this->table->filtercategoryid;
+        $selectedcourseid = (int)$this->table->filtercourseid;
+
+        $categories = [];
         $contenttypes = [];
 
         list($filtersql, $filterparams) = api::get_sql_hvp_to_migrate(false, 'c.fullname ASC, hl.machine_name ASC');
         $records = $DB->get_records_sql($filtersql, $filterparams);
         foreach ($records as $record) {
-            $courses[$record->courseid] = $record->course;
+            $categories[(int)$record->categoryid] = $record->category;
             $contenttypes[$record->contenttype] = $record->contenttype;
+        }
+
+        // If the selected course does not belong to the selected category, reset it.
+        if ($selectedcategoryid > 0 && $selectedcourseid > 0) {
+            $belongs = $DB->record_exists_sql(
+                "SELECT 1
+                   FROM {course} c
+                  WHERE c.id = :courseid
+                    AND c.category = :categoryid",
+                ['courseid' => $selectedcourseid, 'categoryid' => $selectedcategoryid]
+            );
+            if (!$belongs) {
+                $selectedcourseid = 0;
+                $this->table->filtercourseid = 0;
+            }
+        }
+
+        $categoryoptions = [[
+            'value' => 0,
+            'text' => get_string('filterallcategories', 'tool_migratehvp2026'),
+            'selected' => ($selectedcategoryid === 0),
+        ]];
+        foreach ($categories as $id => $name) {
+            $categoryoptions[] = [
+                'value' => $id,
+                'text' => format_string($name),
+                'selected' => ($selectedcategoryid === (int)$id),
+            ];
+        }
+
+        // Build all course options; category selection will narrow visible choices dynamically in the UI.
+        $courseoptionrecords = [];
+        foreach ($records as $record) {
+            $courseoptionrecords[(int)$record->courseid] = [
+                'name' => $record->course,
+                'categoryid' => (int)$record->categoryid,
+            ];
         }
 
         $courseoptions = [[
             'value' => 0,
             'text' => get_string('filterallcourses', 'tool_migratehvp2026'),
-            'selected' => empty($this->table->filtercourseid),
+            'selected' => ($selectedcourseid === 0),
+            'categoryid' => 0,
         ]];
-        foreach ($courses as $id => $fullname) {
+        foreach ($courseoptionrecords as $id => $courseinfo) {
             $courseoptions[] = [
                 'value' => $id,
-                'text' => format_string($fullname),
-                'selected' => ((int)$this->table->filtercourseid === (int)$id),
+                'text' => format_string($courseinfo['name']),
+                'selected' => ($selectedcourseid === (int)$id),
+                'categoryid' => (int)$courseinfo['categoryid'],
             ];
         }
 
@@ -111,6 +153,7 @@ class listnotmigrated implements renderable, templatable {
             'filterformaction' => 'index.php',
             'reseturl' => 'index.php',
             'formaction' => $this->table->baseurl->out(false),
+            'filtercategoryoptions' => $categoryoptions,
             'filtercourseoptions' => $courseoptions,
             'filtercontenttypeoptions' => $contenttypeoptions,
             'filterperpageoptions' => $perpageoptions,

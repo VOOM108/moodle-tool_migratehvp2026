@@ -214,7 +214,8 @@ class api {
         ?string $sort = null,
         ?array $libraryids = null,
         int $courseid = 0,
-        string $contenttype = ''
+        string $contenttype = '',
+        int $categoryid = 0
     ): array {
         global $DB;
 
@@ -229,8 +230,8 @@ class api {
             $groupby = '';
         } else {
             $select = 'h.id, h.course as courseid, c.fullname as course, cc.name as category, h.name, ' .
-                'hl.machine_name as contenttype, COUNT(hc.id) as savedstate, cm.id as instanceid';
-            $groupby = 'GROUP BY h.id, h.course, c.fullname, cc.name, h.name, hl.machine_name, cm.id';
+                'cc.id as categoryid, hl.machine_name as contenttype, COUNT(hc.id) as savedstate, cm.id as instanceid';
+            $groupby = 'GROUP BY h.id, h.course, c.fullname, cc.name, cc.id, h.name, hl.machine_name, cm.id';
         }
 
         // Get only mod_hvp contents with main library in libraryids (if defined).
@@ -257,6 +258,11 @@ class api {
         if ($courseid > 0) {
             $where .= ' AND h.course = :courseid';
             $params['courseid'] = $courseid;
+        }
+
+        if ($categoryid > 0) {
+            $where .= ' AND c.category = :categoryid';
+            $params['categoryid'] = $categoryid;
         }
 
         if ($contenttype !== '') {

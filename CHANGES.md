@@ -1,5 +1,13 @@
 # VERSIONS HISTORY
 
+## Changes in version 0.9.0 (2026021802) - Category-aware filtering
+
+- Add category filter to the migration list page.
+- Make category, course and content-type filters work together more intuitively.
+- Add dynamic dropdown behavior so selecting a category narrows the available courses instantly.
+- Keep selected course/category combinations consistent when URL parameters are stale or mismatched.
+- Bump plugin release to 0.9 and version to 2026021802.
+
 ## Changes in version 0.7.0 (20260218) - Standalone 2026 fork
 
 - Standalone continuation of the original `moodlehq/moodle-tool_migratehvp2h5p` plugin.
