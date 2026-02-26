@@ -452,7 +452,7 @@ class api {
     }
 
     /**
-     * Get the author of the HVP activity
+     * Get the author of the HVP activity.
      * As the user who created the HVP instance can't be obtained directly from mod_hvp tables, it
      * will be determined from other sources:
      *   - the user id from log table, or
@@ -462,9 +462,9 @@ class api {
      *   - fall back to the user id that is running the import.
      *
      * @param stdClass $hvp The HVP activity.
-     * @return string The author identifier.
+     * @return int The author identifier.
      */
-    public static function get_hvp_author(stdClass $hvp): string {
+    public static function get_hvp_author(stdClass $hvp): int {
         global $DB, $USER;
         $authorid = null;
 
@@ -472,7 +472,7 @@ class api {
         $manager = get_log_manager(true);
         $stores = $manager->get_readers();
         /** @var \logstore_standard\log\store $store */
-        $store = $stores['logstore_standard'];
+        $store = $stores['logstore_standard'] ?? null;
         if (!empty($store)) {
             $select = "component = 'core' AND action = 'created' AND target = 'course_module' AND objectid = :objectid AND
                     courseid = :courseid";
@@ -521,7 +521,7 @@ class api {
         if (empty($authorid)) {
             $creators = get_users_by_capability($coursecontext, 'moodle/contentbank:manageanycontent', 'u.id');
             if (!empty($creators)) {
-                $authorid = array_keys($editors)[0];
+                $authorid = array_keys($creators)[0];
             }
         }
 

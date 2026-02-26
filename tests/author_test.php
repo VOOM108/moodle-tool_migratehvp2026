@@ -285,4 +285,28 @@ final class author_test extends advanced_testcase {
         // We expect the editing teacher.
         $this->assertTrue($author == $teacher->id);
     }
+
+    /**
+     * No log entry; HVP has no files; no editing teacher; course has a manager.
+     *
+     * @covers ::get_hvp_author
+     * @return void
+     */
+    public function test_manageanycontent_user_assigned(): void {
+        $this->setup_logs();
+        $this->resetAfterTest(true);
+        $dg = $this->getDataGenerator();
+
+        $course = $dg->create_course();
+        $manager = $dg->create_user([ 'username' => 'manager1' ]);
+        $dg->enrol_user($manager->id, $course->id, 'manager');
+        $hvp = $this->fake_hvp($course);
+        $this->setAdminUser();
+
+        // Test.
+        $author = api::get_hvp_author($hvp);
+
+        // We expect the manager because they can manage any content in content bank.
+        $this->assertEquals($manager->id, $author);
+    }
 }
