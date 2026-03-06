@@ -86,6 +86,14 @@
                     </select>
                 </div>
                 <div class="col-12 col-lg-2">
+                    <label class="form-label" for="filter-coursevisible">{{#str}}filtercoursevisibility, tool_migratehvp2026{{/str}}</label>
+                    <select class="form-select" id="filter-coursevisible" name="coursevisible">
+                        {{#filtercoursevisibilityoptions}}
+                            <option value="{{value}}" {{#selected}}selected{{/selected}}>{{text}}</option>
+                        {{/filtercoursevisibilityoptions}}
+                    </select>
+                </div>
+                <div class="col-12 col-lg-2">
                     <label class="form-label" for="filter-perpage">{{#str}}filterperpage, tool_migratehvp2026{{/str}}</label>
                     <select class="form-select" id="filter-perpage" name="perpage">
                         {{#filterperpageoptions}}
@@ -102,12 +110,62 @@
     </div>
 </form>
 
+{{#showlinkrewrite}}
+<form action="{{linkrewrite.formaction}}" method="post" class="mb-3" id="migratehvp2026linkrewriteform">
+    <input type="hidden" name="sesskey" value="{{linkrewrite.sesskey}}">
+    <input type="hidden" name="categoryid" value="{{linkrewrite.categoryid}}">
+    <input type="hidden" name="courseid" value="{{linkrewrite.courseid}}">
+    <input type="hidden" name="coursevisible" value="{{linkrewrite.coursevisible}}">
+    <input type="hidden" name="contenttype" value="{{linkrewrite.contenttype}}">
+    <input type="hidden" name="perpage" value="{{linkrewrite.perpage}}">
+
+    <div class="card">
+        <div class="card-body">
+            <h3>{{#str}}linkrewrite_heading, tool_migratehvp2026{{/str}}</h3>
+            <p class="text-muted mb-2">{{#str}}linkrewrite_desc, tool_migratehvp2026{{/str}}</p>
+            <p class="text-muted mb-2">{{#str}}linkrewrite_mapcounthint, tool_migratehvp2026{{/str}}: {{linkrewrite.mapcount}}</p>
+            {{#linkrewrite.coursefilteractive}}
+                <p class="text-muted mb-2">{{#str}}linkrewrite_coursefilterhint, tool_migratehvp2026{{/str}}</p>
+            {{/linkrewrite.coursefilteractive}}
+
+            <div class="d-flex flex-wrap gap-3 mb-3">
+                <div class="form-check">
+                    <input class="form-check-input me-2" type="checkbox" id="linktarget-pages" name="linktargets[]" value="pages" {{#linkrewrite.targetpages}}checked{{/linkrewrite.targetpages}}>
+                    <label class="form-check-label" for="linktarget-pages">{{#str}}linkrewrite_target_pages, tool_migratehvp2026{{/str}}</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input me-2" type="checkbox" id="linktarget-labels" name="linktargets[]" value="labels" {{#linkrewrite.targetlabels}}checked{{/linkrewrite.targetlabels}}>
+                    <label class="form-check-label" for="linktarget-labels">{{#str}}linkrewrite_target_labels, tool_migratehvp2026{{/str}}</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input me-2" type="checkbox" id="linktarget-sections" name="linktargets[]" value="sections" {{#linkrewrite.targetsections}}checked{{/linkrewrite.targetsections}}>
+                    <label class="form-check-label" for="linktarget-sections">{{#str}}linkrewrite_target_sections, tool_migratehvp2026{{/str}}</label>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-outline-primary" type="submit" name="linkaction" value="preview">{{#str}}linkrewrite_preview, tool_migratehvp2026{{/str}}</button>
+                <button class="btn btn-warning" type="submit" name="linkaction" value="execute">{{#str}}linkrewrite_execute, tool_migratehvp2026{{/str}}</button>
+                <button class="btn btn-outline-secondary" type="submit" name="linkaction" value="exportcsv">{{#str}}linkrewrite_exportcsv, tool_migratehvp2026{{/str}}</button>
+            </div>
+        </div>
+    </div>
+</form>
+{{/showlinkrewrite}}
+
+{{#showlinkrewritehint}}
+<div class="alert alert-info mt-3" role="alert">
+    {{linkrewritehinttext}}
+</div>
+{{/showlinkrewritehint}}
+
 <form action="{{formaction}}" method="post" id="migratehvp2026form">
     <div data-region="hvpactivities">
         <div class="mt-1 mb-1" data-region="hvp-activities-table">
             {{{hvpactivities}}}
         </div>
     </div>
+
     <div class="mt-1">
         <h3>{{#str}} settings, tool_migratehvp2026 {{/str}}</h3>
         {{#settings}}

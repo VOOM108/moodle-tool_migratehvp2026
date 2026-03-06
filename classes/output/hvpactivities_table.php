@@ -54,6 +54,9 @@ class hvpactivities_table extends table_sql {
     /** @var string Selected content type (machine name) to filter by. */
     public $filtercontenttype = '';
 
+    /** @var int Selected course visibility to filter by (-1 all, 1 shown, 0 hidden). */
+    public $filtercoursevisible = -1;
+
     /** @var int Number of records per page. */
     public $filterperpage = 50;
 
@@ -68,6 +71,9 @@ class hvpactivities_table extends table_sql {
 
     /** @var int Whether visibility/availability settings should be preserved. */
     public $preserveavailability = 1;
+
+    /** @var array Selected link rewrite targets. */
+    public $linktargets = ['pages', 'labels', 'sections'];
 
     /**
      * Constructor.
@@ -207,7 +213,35 @@ class hvpactivities_table extends table_sql {
      */
     public function col_name(stdClass $data): string {
         $url = new moodle_url('/mod/hvp/view.php', ['id' => $data->instanceid]);
-        return html_writer::link($url, format_string($data->name), ['target' => '_blank']);
+
+        $parts = [];
+        if (!empty($data->hasmigrated)) {
+            $parts[] = html_writer::span('↔', 'me-1 text-success', [
+                'title' => get_string('hasmigratedicon', 'tool_migratehvp2026'),
+                'aria-label' => get_string('hasmigratedicon', 'tool_migratehvp2026'),
+            ]);
+        }
+
+        $parts[] = html_writer::link($url, format_string($data->name), ['target' => '_blank']);
+        return implode('', $parts);
+    }
+
+    /**
+     * The course column with compact visibility icon.
+     *
+     * @param stdClass $data The row data.
+     * @return string
+     */
+    public function col_course(stdClass $data): string {
+        global $OUTPUT;
+
+        if (!empty($data->coursevisible)) {
+            $icon = $OUTPUT->render(new \pix_icon('t/hide', get_string('courseshownicon', 'tool_migratehvp2026'), '', ['class' => 'me-1']));
+        } else {
+            $icon = $OUTPUT->render(new \pix_icon('t/show', get_string('coursehiddenicon', 'tool_migratehvp2026'), '', ['class' => 'me-1']));
+        }
+
+        return $icon . format_string($data->course);
     }
 
     /**
@@ -226,7 +260,8 @@ class hvpactivities_table extends table_sql {
             null,
             $this->filtercourseid,
             $this->filtercontenttype,
-            $this->filtercategoryid
+            $this->filtercategoryid,
+            $this->filtercoursevisible
         );
 
         return [$sql, $params];

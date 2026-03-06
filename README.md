@@ -51,6 +51,30 @@ Example:
 
 `php admin/tool/migratehvp2026/cli/migrate.php --execute --courseid=42 --keeporiginal=2 --suffix="(old hidden copy)" --preserveavailability=1 --limit=200`
 
+### Rewrite links after migration (pages, labels, text areas)
+
+This fork also includes:
+
+`php admin/tool/migratehvp2026/cli/replace_links.php`
+
+It uses the migration map (`tool_migratehvp2026_map`) to build old->new URL pairs and can:
+
+- Dry-run and report what would be changed (default).
+- Directly replace links (`--execute`) in:
+  - `mod_page` content (`page.content`)
+  - `mod_label` intro text (`label.intro`)
+  - course section summaries (`course_sections.summary`)
+- Export all URL mapping pairs to CSV (`--exportcsv="/path/file.csv"`).
+
+Examples:
+
+- Dry-run all targets:
+  `php admin/tool/migratehvp2026/cli/replace_links.php`
+- Execute only in one course:
+  `php admin/tool/migratehvp2026/cli/replace_links.php --execute --courseid=42`
+- Export URL map CSV:
+  `php admin/tool/migratehvp2026/cli/replace_links.php --exportcsv="/tmp/hvp_h5p_map.csv"`
+
 Each HVP is migrated once according to the migration map. To re-migrate an item, reset its migration status from the failed/incomplete admin page or remove the mapped target as appropriate for your workflow.
 
 ## Dependencies

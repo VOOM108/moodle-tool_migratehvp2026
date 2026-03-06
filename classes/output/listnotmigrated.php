@@ -63,6 +63,16 @@ class listnotmigrated implements renderable, templatable {
 
         $selectedcategoryid = (int)$this->table->filtercategoryid;
         $selectedcourseid = (int)$this->table->filtercourseid;
+        $selectedcoursevisible = (int)$this->table->filtercoursevisible;
+        $selectedtargets = is_array($this->table->linktargets) ? $this->table->linktargets : [];
+        $linkmapcount = api::get_migrated_link_map_count($selectedcourseid, $selectedcategoryid);
+        $hasselectedscope = ($selectedcourseid > 0 || $selectedcategoryid > 0);
+        $showlinkrewrite = ($hasselectedscope && $linkmapcount > 0);
+        if (!$hasselectedscope) {
+            $linkrewritehinttext = get_string('linkrewrite_selectscopehint', 'tool_migratehvp2026');
+        } else {
+            $linkrewritehinttext = get_string('linkrewrite_availableaftermigration', 'tool_migratehvp2026');
+        }
 
         $categories = [];
         $contenttypes = [];
@@ -139,6 +149,24 @@ class listnotmigrated implements renderable, templatable {
             ];
         }
 
+        $coursevisibilityoptions = [
+            [
+                'value' => -1,
+                'text' => get_string('filterallcoursevisibility', 'tool_migratehvp2026'),
+                'selected' => ($selectedcoursevisible === -1),
+            ],
+            [
+                'value' => 1,
+                'text' => get_string('courseshown', 'tool_migratehvp2026'),
+                'selected' => ($selectedcoursevisible === 1),
+            ],
+            [
+                'value' => 0,
+                'text' => get_string('coursehidden', 'tool_migratehvp2026'),
+                'selected' => ($selectedcoursevisible === 0),
+            ],
+        ];
+
         $perpagevalues = [10, 25, 50, 100, 250, 500];
         $perpageoptions = [];
         foreach ($perpagevalues as $value) {
@@ -156,6 +184,7 @@ class listnotmigrated implements renderable, templatable {
             'filtercategoryoptions' => $categoryoptions,
             'filtercourseoptions' => $courseoptions,
             'filtercontenttypeoptions' => $contenttypeoptions,
+            'filtercoursevisibilityoptions' => $coursevisibilityoptions,
             'filterperpageoptions' => $perpageoptions,
             'settings' => [
                 [
@@ -219,6 +248,23 @@ class listnotmigrated implements renderable, templatable {
                 ],
             ],
             'hidesuffix' => $this->table->hidesuffix,
+            'showlinkrewrite' => $showlinkrewrite,
+            'showlinkrewritehint' => !$showlinkrewrite,
+            'linkrewritehinttext' => $linkrewritehinttext,
+            'linkrewrite' => [
+                'formaction' => $this->table->baseurl->out(false),
+                'sesskey' => sesskey(),
+                'categoryid' => $selectedcategoryid,
+                'courseid' => $selectedcourseid,
+                'coursevisible' => $selectedcoursevisible,
+                'contenttype' => $this->table->filtercontenttype,
+                'perpage' => (int)$this->table->filterperpage,
+                'targetpages' => in_array('pages', $selectedtargets, true),
+                'targetlabels' => in_array('labels', $selectedtargets, true),
+                'targetsections' => in_array('sections', $selectedtargets, true),
+                'coursefilteractive' => ($selectedcourseid > 0),
+                'mapcount' => $linkmapcount,
+            ],
         ];
 
         $hidesuffixcontext = [

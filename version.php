@@ -26,8 +26,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'tool_migratehvp2026';
-$plugin->release = '0.10';
-$plugin->version = 2026021804;
+$plugin->release = '0.14';
+$plugin->version = 2026021812;
 $plugin->requires = 2024100700;
 $plugin->maturity = MATURITY_BETA;
 $plugin->dependencies = [

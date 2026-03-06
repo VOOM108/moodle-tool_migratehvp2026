@@ -215,7 +215,8 @@ class api {
         ?array $libraryids = null,
         int $courseid = 0,
         string $contenttype = '',
-        int $categoryid = 0
+        int $categoryid = 0,
+        int $coursevisible = -1
     ): array {
         global $DB;
 
@@ -229,13 +230,14 @@ class api {
             $select = 'COUNT(DISTINCT h.id)';
             $groupby = '';
         } else {
-            $select = 'h.id, h.course as courseid, c.fullname as course, cc.name as category, h.name, ' .
-                'cc.id as categoryid, hl.machine_name as contenttype, COUNT(hc.id) as savedstate, cm.id as instanceid';
-            $groupby = 'GROUP BY h.id, h.course, c.fullname, cc.name, cc.id, h.name, hl.machine_name, cm.id';
+            $select = 'h.id, h.course as courseid, c.fullname as course, c.visible as coursevisible, cc.name as category, h.name, ' .
+                'cc.id as categoryid, hl.machine_name as contenttype, COUNT(hc.id) as savedstate, cm.id as instanceid, ' .
+                'CASE WHEN hmig.id IS NULL THEN 0 ELSE 1 END as hasmigrated';
+            $groupby = 'GROUP BY h.id, h.course, c.fullname, c.visible, cc.name, cc.id, h.name, hl.machine_name, cm.id, hmig.id';
         }
 
         // Get only mod_hvp contents with main library in libraryids (if defined).
-        $where = $maptableexists ? 'mm.id IS NULL' : 'mgr.id IS NULL';
+        $where = $maptableexists ? 'mm.id IS NULL' : 'hmig.id IS NULL';
         if (!empty($libraryids)) {
             $i = 1;
             foreach ($libraryids as $libraryid) {
@@ -270,6 +272,22 @@ class api {
             $params['contenttype'] = $contenttype;
         }
 
+        if (in_array($coursevisible, [0, 1], true)) {
+            $where .= ' AND c.visible = :coursevisible';
+            $params['coursevisible'] = $coursevisible;
+        }
+
+        // Legacy migrated-pair join used both as fallback migration detection and for compact migration icon display.
+        $legacymigrationjoin = "LEFT JOIN (
+                             SELECT MIN(i.id) AS id, i.name, i.timecreated, i.course
+                               FROM {h5pactivity} i
+                               JOIN {modules} m2 ON m2.name = 'h5pactivity'
+                               JOIN {course_modules} mgrcm ON mgrcm.module = m2.id AND i.course = mgrcm.course
+                                    AND i.id = mgrcm.instance AND mgrcm.deletioninprogress = 0
+                           GROUP BY i.name, i.timecreated, i.course
+                       ) hmig
+                       ON hmig.name = h.name AND hmig.timecreated = h.timecreated AND hmig.course = h.course";
+
         // We need to select the hvp activities which are not migrated but ignoring the activities in the recycle bin.
         // If the migration map table exists, use it as the source of truth. Otherwise, fallback to legacy heuristic.
         $migrationjoin = '';
@@ -278,14 +296,7 @@ class api {
                     ON mm.hvpid = h.id AND mm.status = :migrationstatuscompleted";
             $params['migrationstatuscompleted'] = self::MIGRATION_COMPLETED;
         } else {
-            $migrationjoin = "LEFT JOIN (
-                             SELECT i.id, i.name, i.timecreated, i.course
-                             FROM {h5pactivity} i
-                             JOIN {modules} m2 ON m2.name = 'h5pactivity'
-                             JOIN {course_modules} mgrcm ON mgrcm.module = m2.id AND i.course = mgrcm.course
-                                 AND i.id = mgrcm.instance AND mgrcm.deletioninprogress = 0
-                       ) mgr
-                       ON mgr.name = h.name AND mgr.timecreated = h.timecreated AND mgr.course = h.course";
+            $migrationjoin = '';
         }
 
         $sql = "SELECT $select
@@ -297,6 +308,7 @@ class api {
                        AND h.id = cm.instance AND cm.deletioninprogress = 0
                   JOIN {course} c ON c.id = h.course
                   JOIN {course_categories} cc ON cc.id = c.category
+                  $legacymigrationjoin
                   $migrationjoin
                  WHERE $where
                        $groupby";
@@ -306,6 +318,380 @@ class api {
         }
 
         return [$sql, $params];
+    }
+
+    /**
+     * Return URL mapping pairs for migrated activities.
+     *
+     * @param int $courseid Optional course restriction.
+     * @return array List of mapping rows with old/new cmids and URLs.
+     */
+    public static function get_migrated_link_map(int $courseid = 0, int $categoryid = 0): array {
+        global $DB, $CFG;
+
+        $params = [
+            'statuscompleted' => self::MIGRATION_COMPLETED,
+            'hvpmodname' => 'hvp',
+            'h5pmodname' => 'h5pactivity',
+        ];
+
+        $where = '';
+        if ($courseid > 0) {
+            $where = ' AND h.course = :courseid';
+            $params['courseid'] = $courseid;
+        } else if ($categoryid > 0) {
+            $where = ' AND c.category = :categoryid';
+            $params['categoryid'] = $categoryid;
+        }
+
+        $sql = "SELECT mm.hvpid, mm.h5pid, h.course AS courseid,
+                       hcm.id AS oldcmid,
+                       h5pcm.id AS newcmid
+                  FROM {tool_migratehvp2026_map} mm
+                  JOIN {hvp} h ON h.id = mm.hvpid
+                  JOIN {course} c ON c.id = h.course
+                  JOIN {h5pactivity} h5p ON h5p.id = mm.h5pid
+                  JOIN {modules} hm ON hm.name = :hvpmodname
+                  JOIN {modules} h5pm ON h5pm.name = :h5pmodname
+                  JOIN {course_modules} hcm ON hcm.module = hm.id
+                       AND hcm.instance = h.id
+                       AND hcm.course = h.course
+                       AND hcm.deletioninprogress = 0
+                  JOIN {course_modules} h5pcm ON h5pcm.module = h5pm.id
+                       AND h5pcm.instance = h5p.id
+                       AND h5pcm.course = h.course
+                       AND h5pcm.deletioninprogress = 0
+                 WHERE mm.status = :statuscompleted
+                       $where
+              ORDER BY h.course, mm.hvpid";
+
+        $rows = $DB->get_records_sql($sql, $params);
+
+        foreach ($rows as $row) {
+            $row->oldrelativeurl = '/mod/hvp/view.php?id=' . $row->oldcmid;
+            $row->newrelativeurl = '/mod/h5pactivity/view.php?id=' . $row->newcmid;
+            $row->oldurl = $CFG->wwwroot . $row->oldrelativeurl;
+            $row->newurl = $CFG->wwwroot . $row->newrelativeurl;
+        }
+
+        return array_values($rows);
+    }
+
+    /**
+     * Count completed migration map rows used for link rewrite operations.
+     *
+     * @param int $courseid Optional course restriction.
+     * @return int
+     */
+    public static function get_migrated_link_map_count(int $courseid = 0, int $categoryid = 0): int {
+        global $DB;
+
+        $params = ['statuscompleted' => self::MIGRATION_COMPLETED];
+        $where = 'mm.status = :statuscompleted';
+        if ($courseid > 0) {
+            $where .= ' AND h.course = :courseid';
+            $params['courseid'] = $courseid;
+        } else if ($categoryid > 0) {
+            $where .= ' AND c.category = :categoryid';
+            $params['categoryid'] = $categoryid;
+        }
+
+        $sql = "SELECT COUNT(1)
+                  FROM {tool_migratehvp2026_map} mm
+                  JOIN {hvp} h ON h.id = mm.hvpid
+                  JOIN {course} c ON c.id = h.course
+                 WHERE $where";
+
+        return (int)$DB->count_records_sql($sql, $params);
+    }
+
+    /**
+     * Build replacement pairs (old URL => new URL) for migrated links.
+     *
+     * @param int $courseid Optional course restriction.
+     * @return array
+     */
+    public static function get_migrated_link_replacements(int $courseid = 0, int $categoryid = 0): array {
+        $maprows = self::get_migrated_link_map($courseid, $categoryid);
+        $replacements = [];
+        $cmidmap = [];
+
+        foreach ($maprows as $row) {
+            $replacements[$row->oldurl] = $row->newurl;
+            $replacements[$row->oldrelativeurl] = $row->newrelativeurl;
+            $cmidmap[(int)$row->oldcmid] = (int)$row->newcmid;
+        }
+
+        return [
+            'maprows' => $maprows,
+            'replacements' => $replacements,
+            'cmidmap' => $cmidmap,
+        ];
+    }
+
+    /**
+     * Rewrite migrated links in selected text areas.
+     *
+     * @param array $targets Allowed values: pages, labels, sections.
+     * @param bool $execute If true, write updates to DB. Otherwise dry-run.
+     * @param int $courseid Optional course restriction.
+     * @return array Summary of processed changes.
+     */
+    public static function rewrite_migrated_links(
+        array $targets,
+        bool $execute = false,
+        int $courseid = 0,
+        int $categoryid = 0
+    ): array {
+        global $DB;
+
+        $allowedtargets = ['pages', 'labels', 'sections'];
+        $targets = array_values(array_unique(array_filter($targets, static function(string $target) use ($allowedtargets): bool {
+            return in_array($target, $allowedtargets, true);
+        })));
+
+        if (empty($targets)) {
+            $targets = $allowedtargets;
+        }
+
+        $mapping = self::get_migrated_link_replacements($courseid, $categoryid);
+        $replacements = $mapping['replacements'];
+        $cmidmap = $mapping['cmidmap'];
+
+        $result = [
+            'mapcount' => count($mapping['maprows']),
+            'targets' => [],
+            'totals' => [
+                'records' => 0,
+                'replacements' => 0,
+                'updated' => 0,
+                'refreshedcourses' => 0,
+            ],
+            'execute' => $execute,
+        ];
+
+        if (empty($replacements)) {
+            return $result;
+        }
+
+        $targetsmeta = [
+            'pages' => ['table' => 'page', 'field' => 'content'],
+            'labels' => ['table' => 'label', 'field' => 'intro'],
+            'sections' => ['table' => 'course_sections', 'field' => 'summary'],
+        ];
+
+        $courseids = [];
+        foreach ($targets as $target) {
+            $meta = $targetsmeta[$target];
+            $summary = self::process_link_rewrite_target(
+                $meta['table'],
+                $meta['field'],
+                $replacements,
+                $cmidmap,
+                $execute,
+                $courseid,
+                $categoryid
+            );
+
+            $result['targets'][$target] = $summary;
+            $result['totals']['records'] += $summary['records'];
+            $result['totals']['replacements'] += $summary['replacements'];
+            $result['totals']['updated'] += $summary['updated'];
+            if (!empty($summary['courseids']) && is_array($summary['courseids'])) {
+                $courseids = array_merge($courseids, $summary['courseids']);
+            }
+        }
+
+        $courseids = array_values(array_unique(array_map('intval', $courseids)));
+        if ($execute && !empty($courseids)) {
+            foreach ($courseids as $cid) {
+                if ($cid > 0) {
+                    rebuild_course_cache($cid, true);
+                }
+            }
+            $result['totals']['refreshedcourses'] = count($courseids);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Export migrated link mapping as CSV string.
+     *
+     * @param int $courseid Optional course restriction.
+     * @return string
+     */
+    public static function export_migrated_link_map_csv(int $courseid = 0, int $categoryid = 0): string {
+        $rows = self::get_migrated_link_map($courseid, $categoryid);
+
+        $stream = fopen('php://temp', 'w+');
+        fputcsv($stream, [
+            'courseid',
+            'hvpid',
+            'h5pid',
+            'oldcmid',
+            'newcmid',
+            'oldrelativeurl',
+            'newrelativeurl',
+            'oldurl',
+            'newurl',
+        ]);
+
+        foreach ($rows as $row) {
+            fputcsv($stream, [
+                $row->courseid,
+                $row->hvpid,
+                $row->h5pid,
+                $row->oldcmid,
+                $row->newcmid,
+                $row->oldrelativeurl,
+                $row->newrelativeurl,
+                $row->oldurl,
+                $row->newurl,
+            ]);
+        }
+
+        rewind($stream);
+        $csv = stream_get_contents($stream);
+        fclose($stream);
+
+        return (string)$csv;
+    }
+
+    /**
+     * Process one target table/field for link rewriting.
+     *
+     * @param string $tablename
+     * @param string $textfield
+     * @param array $replacements
+     * @param array $cmidmap
+     * @param bool $execute
+     * @param int $courseid
+     * @return array [records, replacements, updated]
+     */
+    private static function process_link_rewrite_target(
+        string $tablename,
+        string $textfield,
+        array $replacements,
+        array $cmidmap,
+        bool $execute,
+        int $courseid = 0,
+        int $categoryid = 0
+    ): array {
+        global $DB;
+
+        $fields = "id, course, $textfield";
+        $where = '';
+        $params = [];
+        if ($courseid > 0) {
+            $where = 'course = :courseid';
+            $params['courseid'] = $courseid;
+        } else if ($categoryid > 0) {
+            $categorycoursesql = "SELECT id
+                                   FROM {course}
+                                  WHERE category = :categoryid";
+            $categorycourses = $DB->get_records_sql($categorycoursesql, ['categoryid' => $categoryid]);
+            $categorycourseids = array_map(static function($record): int {
+                return (int)$record->id;
+            }, array_values($categorycourses));
+
+            if (empty($categorycourseids)) {
+                return [
+                    'records' => 0,
+                    'replacements' => 0,
+                    'updated' => 0,
+                    'courseids' => [],
+                ];
+            }
+
+            list($insql, $inparams) = $DB->get_in_or_equal($categorycourseids, SQL_PARAMS_NAMED, 'cid');
+            $where = "course $insql";
+            $params = array_merge($params, $inparams);
+        }
+
+        $records = $DB->get_recordset_select($tablename, $where, $params, 'id ASC', $fields);
+        $changedrecords = 0;
+        $totalreplacements = 0;
+        $updatedrecords = 0;
+        $changedcourseids = [];
+
+        foreach ($records as $record) {
+            $original = (string)$record->{$textfield};
+            if ($original === '') {
+                continue;
+            }
+
+            $updated = strtr($original, $replacements);
+            $regexmatches = 0;
+
+            if (!empty($cmidmap)) {
+                if (preg_match_all("~(?:https?://[^\\s\"'<>]+)?/mod/hvp/view\\.php\\?id=(\\d+)~i", $updated, $matches)) {
+                    foreach ($matches[1] as $matchedcmid) {
+                        $matchedcmid = (int)$matchedcmid;
+                        if (isset($cmidmap[$matchedcmid])) {
+                            $regexmatches++;
+                        }
+                    }
+                }
+
+                $updated = preg_replace_callback(
+                    "~(https?://[^\\s\"'<>]+)/mod/hvp/view\\.php\\?id=(\\d+)~i",
+                    static function(array $m) use ($cmidmap): string {
+                        $oldcmid = (int)$m[2];
+                        if (!isset($cmidmap[$oldcmid])) {
+                            return $m[0];
+                        }
+                        return $m[1] . '/mod/h5pactivity/view.php?id=' . $cmidmap[$oldcmid];
+                    },
+                    $updated
+                );
+
+                $updated = preg_replace_callback(
+                    '~(/mod/hvp/view\.php\?id=(\d+))~i',
+                    static function(array $m) use ($cmidmap): string {
+                        $oldcmid = (int)$m[2];
+                        if (!isset($cmidmap[$oldcmid])) {
+                            return $m[1];
+                        }
+                        return '/mod/h5pactivity/view.php?id=' . $cmidmap[$oldcmid];
+                    },
+                    $updated
+                );
+            }
+
+            if ($updated === $original) {
+                continue;
+            }
+
+            $changedrecords++;
+            if (!empty($record->course)) {
+                $changedcourseids[] = (int)$record->course;
+            }
+
+            foreach ($replacements as $old => $new) {
+                if ($old !== '' && strpos($original, $old) !== false) {
+                    $totalreplacements += substr_count($original, $old);
+                }
+            }
+            $totalreplacements += $regexmatches;
+
+            if ($execute) {
+                $updaterecord = (object) [
+                    'id' => $record->id,
+                    $textfield => $updated,
+                ];
+                $DB->update_record($tablename, $updaterecord);
+                $updatedrecords++;
+            }
+        }
+        $records->close();
+
+        return [
+            'records' => $changedrecords,
+            'replacements' => $totalreplacements,
+            'updated' => $updatedrecords,
+            'courseids' => array_values(array_unique($changedcourseids)),
+        ];
     }
 
     /**

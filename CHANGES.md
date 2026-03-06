@@ -1,5 +1,26 @@
 # VERSIONS HISTORY
 
+## Changes in version 0.14.0 (2026021812) - Scoped rewrite UX + course visibility fixes
+
+- Add course visibility filter (All/Shown/Hidden) and course visibility indicator in the pending migration list.
+- Fix shown/hidden course icons in the activity table to match expected direction.
+- Add in-page link rewrite tools (preview, execute, CSV export) for migrated HVP->H5P links.
+- Keep rewrite actions scoped to selected filters (course first, otherwise category).
+- Ensure rewrite box visibility follows selected scope:
+  - hidden when no category/course scope is selected,
+  - shown only when selected scope has completed migration map rows,
+  - contextual hint shown otherwise.
+- Rebuild affected course caches after execute so updated links appear immediately on course pages.
+- Include refreshed-course count in execute result notifications.
+
+## Changes in version 0.11.0 (2026021805) - Course visibility + link rewrite tooling
+
+- Add course visibility column (Shown/Hidden) to the pending migration list.
+- Add course visibility filter (All/Shown/Hidden).
+- Add CLI tool `cli/replace_links.php` to rewrite migrated links in pages, labels and section summaries.
+- Add dry-run and execute modes for link rewriting.
+- Add optional CSV export of old/new migrated URL mapping pairs.
+
 ## Changes in version 0.9.0 (2026021802) - Category-aware filtering
 
 - Add category filter to the migration list page.

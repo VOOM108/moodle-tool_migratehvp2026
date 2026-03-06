@@ -48,8 +48,23 @@ $preserveavailability = optional_param('preserveavailability', 1, PARAM_INT);
 $preserveavailability = ($preserveavailability === 0) ? 0 : 1;
 $categoryid = optional_param('categoryid', 0, PARAM_INT);
 $courseid = optional_param('courseid', 0, PARAM_INT);
+$coursevisible = optional_param('coursevisible', -1, PARAM_INT);
+if (!in_array($coursevisible, [-1, 0, 1], true)) {
+    $coursevisible = -1;
+}
 $contenttype = trim(optional_param('contenttype', '', PARAM_TEXT));
 $perpage = optional_param('perpage', 50, PARAM_INT);
+$linkaction = trim(optional_param('linkaction', '', PARAM_ALPHA));
+$linktargets = optional_param_array('linktargets', [], PARAM_ALPHA);
+
+$allowedlinktargets = ['pages', 'labels', 'sections'];
+if (empty($linktargets)) {
+    $linktargets = $allowedlinktargets;
+}
+$linktargets = array_values(array_unique(array_intersect($linktargets, $allowedlinktargets)));
+if (empty($linktargets)) {
+    $linktargets = $allowedlinktargets;
+}
 
 // Restrict page size to safe values.
 $perpage = min(max($perpage, 10), 500);
@@ -61,6 +76,7 @@ if ($keeporiginal === api::DELETEORIGINAL) {
 $urlparams = [
     'categoryid' => $categoryid,
     'courseid' => $courseid,
+    'coursevisible' => $coursevisible,
     'contenttype' => $contenttype,
     'perpage' => $perpage,
 ];
@@ -73,6 +89,43 @@ $url = new moodle_url('/admin/tool/migratehvp2026/index.php', $urlparams);
 admin_externalpage_setup('migratehvp2026');
 
 $notices = [];
+
+if (in_array($linkaction, ['preview', 'execute', 'exportcsv'], true)) {
+    require_sesskey();
+
+    try {
+        if ($linkaction === 'exportcsv') {
+            $csv = api::export_migrated_link_map_csv($courseid, $categoryid);
+            $filename = 'migratehvp2026-link-map-' . date('Ymd-His') . '.csv';
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            echo $csv;
+            exit;
+        }
+
+        $executelinks = ($linkaction === 'execute');
+        $summary = api::rewrite_migrated_links($linktargets, $executelinks, $courseid, $categoryid);
+
+        $a = (object) [
+            'maps' => (int)$summary['mapcount'],
+            'records' => (int)$summary['totals']['records'],
+            'replacements' => (int)$summary['totals']['replacements'],
+            'updated' => (int)$summary['totals']['updated'],
+            'courses' => (int)($summary['totals']['refreshedcourses'] ?? 0),
+        ];
+
+        if ($executelinks) {
+            $notices[] = [get_string('linkrewrite_execute_result', 'tool_migratehvp2026', $a), notification::NOTIFY_SUCCESS];
+        } else {
+            $notices[] = [get_string('linkrewrite_preview_result', 'tool_migratehvp2026', $a), notification::NOTIFY_INFO];
+        }
+    } catch (moodle_exception $e) {
+        $notices[] = [$e->getMessage(), notification::NOTIFY_ERROR];
+    }
+}
+
 if (!empty($activityids)) {
     foreach ($activityids as $activityid) {
         try {
@@ -121,12 +174,14 @@ $table = new hvpactivities_table();
 $table->baseurl = $url;
 $table->filtercategoryid = $categoryid;
 $table->filtercourseid = $courseid;
+$table->filtercoursevisible = $coursevisible;
 $table->filtercontenttype = $contenttype;
 $table->filterperpage = $perpage;
 $table->keeporiginal = $keeporiginal;
 $table->copy2cb = $copy2cb;
 $table->hidesuffix = $hidesuffix;
 $table->preserveavailability = $preserveavailability;
+$table->linktargets = $linktargets;
 $activitylist = new listnotmigrated($table);
 echo $OUTPUT->render($activitylist);
 
